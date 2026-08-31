@@ -1,0 +1,14 @@
+TRANSCRITOR WINDOWS V12 - ADAPTATIVA
+
+CORREÇÃO
+- blocos principais de 30 segundos;
+- teste inicial obrigatório de 15 segundos;
+- se um bloco de 30s exceder 4 minutos ou falhar, ele é dividido automaticamente em partes de 15s;
+- cada parte curta tem watchdog próprio;
+- SRT continua sendo a fonte oficial da transcrição;
+- estado separado V12;
+- auditoria separada V12;
+- reaproveita o modelo SMALL já baixado em Downloads\TRANSCRITOR_MODELOS.
+
+IMPORTANTE
+Extraia em uma pasta NOVA. Não use o estado da V10/V11.
