@@ -1,0 +1,85 @@
+name: Montar Transcritor Windows V12 Adaptativa
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  montar:
+    runs-on: windows-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Baixar projeto
+        uses: actions/checkout@v4
+
+      - name: Configurar Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          architecture: "x64"
+
+      - name: Validar Python
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          python -m py_compile app.py
+          python -c "import reportlab,imageio_ffmpeg,requests; print('PYTHON OK')"
+
+      - name: Baixar whisper.cpp oficial
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Stop"
+          $url = "https://github.com/ggml-org/whisper.cpp/releases/download/v1.9.1/whisper-bin-x64.zip"
+          Invoke-WebRequest -Uri $url -OutFile whisper-bin-x64.zip
+          Expand-Archive whisper-bin-x64.zip -DestinationPath whisper -Force
+
+      - name: Validar arquivos whisper sem executar
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Stop"
+          $cli = Get-ChildItem -Path whisper -Recurse -Filter whisper-cli.exe | Select-Object -First 1
+          if (-not $cli) { throw "whisper-cli.exe nao encontrado" }
+
+          $dlls = Get-ChildItem -Path $cli.Directory.FullName -Filter *.dll -ErrorAction SilentlyContinue
+          if (-not $dlls) { throw "DLLs do whisper nao encontradas" }
+
+          if ($cli.Length -lt 100000) { throw "whisper-cli.exe parece incompleto" }
+
+          Write-Host "WHISPER ARQUIVOS OK"
+
+      - name: Criar pacote V12
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          New-Item -ItemType Directory -Force -Path pacote | Out-Null
+
+          Copy-Item app.py pacote\
+          Copy-Item requirements.txt pacote\
+          Copy-Item INICIAR_TRANSCRITOR_V12.bat pacote\
+          Copy-Item LEIA-ME.txt pacote\
+          Copy-Item whisper pacote\whisper -Recurse
+
+          if (!(Test-Path "pacote\app.py")) { throw "app.py ausente" }
+
+          if (!(Get-ChildItem -Path "pacote\whisper" -Recurse -Filter whisper-cli.exe | Select-Object -First 1)) {
+            throw "whisper-cli ausente"
+          }
+
+      - name: Compactar
+        shell: powershell
+        run: |
+          Compress-Archive -Path pacote\* -DestinationPath Transcritor-Windows-V12-ADAPTATIVA.zip -Force
+
+          if (!(Test-Path "Transcritor-Windows-V12-ADAPTATIVA.zip")) {
+            throw "ZIP nao criado"
+          }
+
+      - name: Publicar artefato
+        uses: actions/upload-artifact@v4
+        with:
+          name: Transcritor-Windows-V12-ADAPTATIVA
+          path: Transcritor-Windows-V12-ADAPTATIVA.zip
+          retention-days: 30
